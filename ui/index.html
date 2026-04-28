@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentDoctor — Agent Optimization Platform</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:           #0d1117;
+      --surface:      #161b22;
+      --surface2:     #1c2128;
+      --surface3:     #21262d;
+      --border:       #30363d;
+      --border2:      #21262d;
+      --accent:       #6366f1;
+      --accent-light: #818cf8;
+      --accent-dim:   rgba(99,102,241,0.12);
+      --green:        #3fb950;
+      --green-dim:    rgba(63,185,80,0.12);
+      --yellow:       #d29922;
+      --yellow-dim:   rgba(210,153,34,0.12);
+      --red:          #f85149;
+      --red-dim:      rgba(248,81,73,0.12);
+      --blue:         #58a6ff;
+      --blue-dim:     rgba(88,166,255,0.12);
+      --purple:       #bc8cff;
+      --purple-dim:   rgba(188,140,255,0.12);
+      --text:         #e6edf3;
+      --text2:        #8b949e;
+      --text3:        #6e7681;
+      --radius:       8px;
+      --radius-lg:    12px;
+      --font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --mono:         'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace;
+    }
+    html, body { height: 100%; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; overflow: hidden; }
+
+    /* Layout */
+    .app { display: flex; height: 100vh; }
+
+    /* Sidebar */
+    .sidebar { width: 216px; min-width: 216px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .sidebar-logo { padding: 14px 16px 12px; border-bottom: 1px solid var(--border2); }
+    .blackrock-logo { display: block; width: 148px; height: 22px; overflow: visible; }
+    .logo-product { font-size: 13px; font-weight: 700; color: var(--text); margin-top: 8px; letter-spacing: 0.2px; }
+    .logo-sub { font-size: 10px; color: var(--text3); margin-top: 2px; letter-spacing: 0.6px; text-transform: uppercase; }
+    .nav { padding: 10px 8px; flex: 1; }
+    .nav-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 8px 4px; }
+    .nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; color: var(--text2); font-size: 13px; font-weight: 500; transition: background 0.12s, color 0.12s; user-select: none; }
+    .nav-item:hover { background: var(--border2); color: var(--text); }
+    .nav-item.active { background: var(--accent-dim); color: var(--accent-light); }
+    .nav-badge { margin-left: auto; background: var(--border); color: var(--text3); font-size: 10px; padding: 1px 6px; border-radius: 10px; }
+    .nav-item.active .nav-badge { background: var(--accent-dim); color: var(--accent-light); }
+    .sidebar-footer { padding: 12px 14px; border-top: 1px solid var(--border2); }
+    .version-chip { display: inline-block; background: var(--border2); padding: 2px 8px; border-radius: 10px; font-size: 11px; color: var(--text2); font-family: var(--mono); }
+
+    /* Main */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar { height: 50px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; background: var(--surface); flex-shrink: 0; }
+    .topbar-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .search-box { flex: 1; max-width: 360px; display: flex; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; gap: 6px; }
+    .search-box input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 13px; padding: 6px 0; }
+    .search-box input::placeholder { color: var(--text3); }
+    .search-icon { color: var(--text3); font-size: 13px; }
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+    .content::-webkit-scrollbar { width: 5px; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Dashboard ── */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; cursor: default; }
+    .stat-num { font-size: 30px; font-weight: 700; color: var(--text); line-height: 1; }
+    .stat-label { font-size: 11.5px; color: var(--text2); margin-top: 5px; }
+    .stat-icon { font-size: 18px; margin-bottom: 6px; }
+
+    .section-heading { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
+    .quick-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; font-family: var(--font); }
+    .btn:hover { opacity: 0.85; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .panel-hd { padding: 11px 14px; border-bottom: 1px solid var(--border2); font-size: 13px; font-weight: 600; }
+    .panel-row { padding: 9px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border2); cursor: pointer; transition: background 0.1s; }
+    .panel-row:last-child { border-bottom: none; }
+    .panel-row:hover { background: var(--surface2); }
+    .pr-name { font-size: 12.5px; font-weight: 500; color: var(--text); min-width: 120px; }
+    .pr-desc { font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Cards ── */
+    .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .chip { padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); transition: all 0.12s; }
+    .chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent-light); }
+    .chip:hover:not(.active) { border-color: var(--text3); color: var(--text); }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; cursor: pointer; transition: border-color 0.2s, transform 0.12s; }
+    .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .card-hd { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+    .card-icon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .ci-agent { background: var(--accent-dim); }
+    .ci-skill { background: var(--green-dim); }
+    .ci-cmd   { background: var(--blue-dim); }
+    .card-name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .card-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .card-desc { font-size: 12px; color: var(--text2); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-tags { margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag { display: inline-block; background: var(--surface2); border: 1px solid var(--border2); color: var(--text2); font-size: 10px; padding: 1px 6px; border-radius: 4px; font-family: var(--mono); }
+    .tag-opus   { border-color: rgba(188,140,255,0.4); color: var(--purple); }
+    .tag-sonnet { border-color: rgba(99,102,241,0.4);  color: var(--accent-light); }
+    .tag-haiku  { border-color: rgba(63,185,80,0.4);   color: var(--green); }
+    .empty { text-align: center; padding: 60px; color: var(--text3); grid-column: 1/-1; }
+    .empty .emoji { font-size: 36px; margin-bottom: 10px; }
+
+    /* ── Optimizer ── */
+    .opt-wrap { max-width: 860px; }
+    .opt-hero { background: linear-gradient(135deg, var(--accent-dim), var(--purple-dim)); border: 1px solid rgba(99,102,241,0.25); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; }
+    .opt-hero h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .opt-hero p { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
+    .opt-textarea { width: 100%; min-height: 100px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px; color: var(--text); font-size: 13.5px; font-family: var(--font); line-height: 1.6; resize: vertical; outline: none; transition: border-color 0.15s; }
+    .opt-textarea:focus { border-color: var(--accent); }
+    .opt-textarea::placeholder { color: var(--text3); }
+    .opt-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .opt-hint { font-size: 11.5px; color: var(--text3); margin-left: 4px; }
+
+    /* Report */
+    .report { animation: fadeUp 0.25s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Score bar */
+    .score-banner { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 24px; }
+    .score-ring { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+    .score-ring svg { transform: rotate(-90deg); }
+    .score-ring .track { fill: none; stroke: var(--border); stroke-width: 6; }
+    .score-ring .fill  { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1); }
+    .score-ring .label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .score-num  { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+    .score-unit { font-size: 10px; color: var(--text3); }
+    .score-info { flex: 1; }
+    .score-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .score-sub   { font-size: 12.5px; color: var(--text2); line-height: 1.5; }
+    .score-chips { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .score-chip { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .sc-green  { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(63,185,80,0.3); }
+    .sc-blue   { background: var(--blue-dim);   color: var(--blue);   border: 1px solid rgba(88,166,255,0.3); }
+    .sc-yellow { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); }
+    .sc-purple { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+
+    /* Metric cards */
+    .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+    .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .metric-val { font-size: 28px; font-weight: 700; line-height: 1; }
+    .metric-sub { font-size: 11.5px; color: var(--text2); margin-top: 4px; }
+    .metric-delta { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-top: 4px; }
+    .delta-green { background: var(--green-dim); color: var(--green); }
+    .delta-red   { background: var(--red-dim);   color: var(--red); }
+    .m-green { color: var(--green); }
+    .m-blue  { color: var(--blue); }
+    .m-purple{ color: var(--purple); }
+
+    /* Before / After */
+    .compare-table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 20px; }
+    .compare-hd { display: grid; grid-template-columns: 160px 1fr 1fr; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 14px; border-bottom: 1px solid var(--border2); background: var(--surface2); }
+    .compare-row { display: grid; grid-template-columns: 160px 1fr 1fr; padding: 11px 14px; border-bottom: 1px solid var(--border2); font-size: 13px; align-items: start; }
+    .compare-row:last-child { border-bottom: none; }
+    .compare-dim { color: var(--text3); font-size: 12px; }
+    .compare-before { color: var(--text2); }
+    .compare-after  { color: var(--green); font-weight: 500; }
+    .compare-after .tag { border-color: rgba(63,185,80,0.3); color: var(--green); background: var(--green-dim); }
+
+    /* Optimizations list */
+    .opt-list { margin-bottom: 20px; }
+    .opt-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
+    .opt-item-hd { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; transition: background 0.12s; }
+    .opt-item-hd:hover { background: var(--surface2); }
+    .opt-item-icon { font-size: 18px; }
+    .opt-item-cat { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+    .opt-item-impact { font-size: 11.5px; color: var(--green); font-weight: 500; }
+    .opt-item-arrow { color: var(--text3); font-size: 12px; transition: transform 0.15s; }
+    .opt-item.open .opt-item-arrow { transform: rotate(90deg); }
+    .opt-item-body { display: none; padding: 0 16px 14px; }
+    .opt-item.open .opt-item-body { display: block; }
+    .opt-before-after { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .oba-box { background: var(--surface2); border-radius: 6px; padding: 10px 12px; }
+    .oba-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .oba-label.before { color: var(--red); }
+    .oba-label.after  { color: var(--green); }
+    .oba-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+    .opt-reason { font-size: 12px; color: var(--text3); font-style: italic; border-left: 2px solid var(--border); padding-left: 10px; }
+
+    /* Agent output */
+    .agent-output { margin-bottom: 20px; }
+    .agent-output-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .agent-output-hd h3 { font-size: 14px; font-weight: 600; }
+    .agent-code { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .agent-code-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid var(--border2); background: var(--surface2); }
+    .agent-code-filename { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+    .copy-btn { background: var(--border); border: none; color: var(--text2); padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+    .copy-btn:hover { background: var(--accent-dim); color: var(--accent-light); }
+    .copy-btn.copied { background: var(--green-dim); color: var(--green); }
+    .agent-code pre { padding: 16px; font-family: var(--mono); font-size: 12px; line-height: 1.65; color: var(--text); white-space: pre-wrap; word-break: break-word; max-height: 340px; overflow-y: auto; }
+    .agent-code pre::-webkit-scrollbar { width: 4px; }
+    .agent-code pre::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Syntax colors */
+    .sy-key  { color: var(--purple); }
+    .sy-val  { color: var(--green); }
+    .sy-str  { color: #a5d6ff; }
+    .sy-h1   { color: var(--accent-light); font-weight: 700; }
+    .sy-h2   { color: var(--blue); font-weight: 600; }
+    .sy-h3   { color: var(--text); font-weight: 600; }
+    .sy-li   { color: var(--text2); }
+    .sy-cm   { color: var(--text3); font-style: italic; }
+    .sy-delim{ color: var(--yellow); }
+
+    /* AgentDoctor components */
+    .rec-section { margin-bottom: 20px; }
+    .rec-section h3 { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .rec-section h3 .count { font-size: 11px; background: var(--border); color: var(--text3); padding: 1px 6px; border-radius: 10px; }
+    .rec-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+    .rec-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; transition: border-color 0.15s; }
+    .rec-card:hover { border-color: var(--accent); }
+    .rec-score { background: var(--accent-dim); color: var(--accent-light); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: var(--mono); flex-shrink: 0; margin-top: 1px; }
+    .rec-body { flex: 1; min-width: 0; }
+    .rec-name { font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rec-desc { font-size: 11.5px; color: var(--text2); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    /* Install box */
+    .install-banner { background: var(--surface); border: 1px solid rgba(63,185,80,0.3); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .install-cmd { font-family: var(--mono); font-size: 14px; color: var(--green); flex: 1; }
+    .install-cmd code::before { content: '$ '; color: var(--text3); }
+    .install-actions { display: flex; gap: 8px; }
+
+    /* Detail panel */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100; display: none; align-items: flex-start; justify-content: flex-end; }
+    .overlay.open { display: flex; }
+    .drawer { width: 540px; max-width: 90vw; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.22s cubic-bezier(.4,0,.2,1); }
+    .overlay.open .drawer { transform: translateX(0); }
+    .drawer-hd { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; }
+    .drawer-close { background: none; border: none; color: var(--text2); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 4px; margin-left: auto; }
+    .drawer-close:hover { background: var(--border); color: var(--text); }
+    .drawer-title { font-size: 15px; font-weight: 700; }
+    .drawer-meta  { font-size: 12px; color: var(--text3); margin-top: 3px; }
+    .drawer-body  { flex: 1; overflow-y: auto; padding: 18px; }
+    .drawer-body::-webkit-scrollbar { width: 4px; }
+    .drawer-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .drawer-sec { margin-bottom: 18px; }
+    .drawer-sec-label { font-size: 10.5px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px; }
+    .drawer-text { font-size: 13px; color: var(--text2); line-height: 1.7; }
+    .drawer-code { background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; font-family: var(--mono); font-size: 12px; color: var(--text); white-space: pre-wrap; word-break: break-word; line-height: 1.6; max-height: 260px; overflow-y: auto; }
+    .drawer-ft { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+
+    /* Spinner */
+    .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.55s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading { display: flex; align-items: center; gap: 10px; color: var(--text3); font-size: 13px; padding: 40px; }
+
+    * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <!-- BlackRock wordmark — text-based SVG, white on dark -->
+      <svg class="blackrock-logo" viewBox="0 0 148 22" xmlns="http://www.w3.org/2000/svg" aria-label="BlackRock">
+        <text
+          x="0" y="17"
+          font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="17"
+          font-weight="700"
+          letter-spacing="-0.3"
+          fill="white"
+        >BlackRock</text>
+      </svg>
+      <div class="logo-product">AgentDoctor</div>
+      <div class="logo-sub">Agent Optimization Platform</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-view="dashboard">
+        <span>⊡</span> Dashboard
+      </div>
+      <div class="nav-item" data-view="optimizer">
+        <span>✦</span> Optimizer
+      </div>
+      <div class="nav-label">Browse</div>
+      <div class="nav-item" data-view="agents">
+        <span>⬡</span> Agents
+        <span class="nav-badge" id="nb-agents">—</span>
+      </div>
+      <div class="nav-item" data-view="skills">
+        <span>◈</span> Skills
+        <span class="nav-badge" id="nb-skills">—</span>
+      </div>
+      <div class="nav-item" data-view="commands">
+        <span>⌘</span> Commands
+        <span class="nav-badge" id="nb-commands">—</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="version-chip" id="ver">v—</span>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="search-box" id="search-box" style="display:none">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search-input" placeholder="Search…" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Dashboard -->
+      <div class="view active" id="view-dashboard">
+        <div class="stat-grid" id="stat-grid">
+          <div class="loading"><div class="spinner"></div> Loading…</div>
+        </div>
+        <div class="section-heading">Quick Start</div>
+        <div class="quick-grid">
+          <button class="btn btn-primary" onclick="app.goto('optimizer')">✦ Optimize My Agent</button>
+          <button class="btn btn-ghost" onclick="app.goto('agents')">Browse Agents</button>
+          <button class="btn btn-ghost" onclick="app.goto('skills')">Browse Skills</button>
+          <button class="btn btn-ghost" onclick="app.goto('commands')">Commands</button>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-hd">Featured Agents</div>
+            <div id="dash-agents"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd">Featured Skills</div>
+            <div id="dash-skills"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optimizer -->
+      <div class="view" id="view-optimizer">
+        <div class="opt-wrap">
+          <div class="opt-hero">
+            <h2>✦ Agent Optimizer</h2>
+            <p>Describe your agent's purpose and AgentDoctor will build an optimized agent definition — selecting the right model, minimal tool set, and structured system prompt — then show you the exact performance and cost improvements.</p>
+            <textarea
+              class="opt-textarea"
+              id="opt-input"
+              placeholder="e.g. I need a Python code review agent that catches security issues, enforces PEP 8, and runs tests with pytest. It should be integrated into a CI pipeline and handle Django codebases."
+            ></textarea>
+            <div class="opt-actions">
+              <button class="btn btn-primary" id="opt-btn" onclick="app.runOptimizer()">✦ Optimize Agent</button>
+              <button class="btn btn-ghost" onclick="app.clearOptimizer()">Clear</button>
+              <span class="opt-hint" id="opt-hint"></span>
+            </div>
+          </div>
+          <div id="opt-results"></div>
+        </div>
+      </div>
+
+      <!-- Agents -->
+      <div class="view" id="view-agents">
+        <div class="filter-row" id="agents-filters"></div>
+        <div class="cards" id="agents-grid"></div>
+      </div>
+
+      <!-- Skills -->
+      <div class="view" id="view-skills">
+        <div class="filter-row" id="skills-filters"></div>
+        <div class="cards" id="skills-grid"></div>
+      </div>
+
+      <!-- Commands -->
+      <div class="view" id="view-commands">
+        <div class="cards" id="commands-grid"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="overlay" id="drawer-overlay" onclick="app.closeDrawer(event)">
+  <div class="drawer" id="drawer">
+    <div class="drawer-hd">
+      <div>
+        <div class="drawer-title" id="drawer-title"></div>
+        <div class="drawer-meta"  id="drawer-meta"></div>
+      </div>
+      <button class="drawer-close" onclick="app.closeDrawer(null)">✕</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+    <div class="drawer-ft"  id="drawer-ft"></div>
+  </div>
+</div>
+
+<script>
+/* ─── State ─── */
+const S = {
+  view: 'dashboard',
+  agents: [], skills: [], commands: [], stats: {},
+  agentFilter: 'all', skillFilter: 'all', q: '',
+};
+
+/* ─── API ─── */
+const api = {
+  async get(p)    { const r = await fetch(p); if (!r.ok) throw new Error(r.statusText); return r.json(); },
+  async post(p,b) { const r = await fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}); if (!r.ok) { const e=await r.json(); throw new Error(e.error||r.statusText); } return r.json(); },
+};
+
+/* ─── Util ─── */
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function copyText(text, el) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = el.textContent;
+    el.textContent = 'Copied!';
+    el.classList.add('copied');
+    setTimeout(() => { el.textContent = orig; el.classList.remove('copied'); }, 1800);
+  });
+}
+
+function fmtCost(v) { return `$${parseFloat(v).toFixed(2)}`; }
+
+function modelTag(m) {
+  const cls = m==='opus'?'tag-opus':m==='haiku'?'tag-haiku':'tag-sonnet';
+  const ico = m==='opus'?'🔮':m==='haiku'?'⚡':'✦';
+  return `<span class="tag ${cls}">${ico} ${m}</span>`;
+}
+
+function filterSearch(items, q, fields) {
+  if (!q) return items;
+  const lq = q.toLowerCase();
+  return items.filter(i => fields.some(f => String(i[f]||'').toLowerCase().includes(lq)));
+}
+
+/* ─── Syntax-highlight the agent markdown ─── */
+function highlightMd(src) {
+  return esc(src)
+    .replace(/^(---)([\s\S]*?)(---)/m, (_, a, b, c) =>
+      `<span class="sy-delim">${a}</span>${
+        b.replace(/^(\w[\w-]*)(:\s*)(.*)/gm, (_,k,sep,v) =>
+          `<span class="sy-key">${k}</span>${esc(sep)}<span class="sy-val">${v}</span>`)
+      }<span class="sy-delim">${c}</span>`)
+    .replace(/^(#{3} .+)$/gm, s => `<span class="sy-h3">${s}</span>`)
+    .replace(/^(#{2} .+)$/gm, s => `<span class="sy-h2">${s}</span>`)
+    .replace(/^(# .+)$/gm,    s => `<span class="sy-h1">${s}</span>`)
+    .replace(/^(\d+\. .+)$/gm,s => `<span class="sy-li">${s}</span>`)
+    .replace(/^(- .+)$/gm,    s => `<span class="sy-li">${s}</span>`)
+    .replace(/(`.+?`)/g,       s => `<span class="sy-str">${s}</span>`);
+}
+
+/* ─── Render: Dashboard ─── */
+function renderDashboard() {
+  const g = document.getElementById('stat-grid');
+  g.innerHTML = [
+    ['⬡','agents','Agents'],['◈','skills','Skills'],['⌘','commands','Commands'],['◻','languages','Languages'],
+  ].map(([icon,key,label]) =>
+    `<div class="stat-card"><div class="stat-icon">${icon}</div><div class="stat-num">${S.stats[key]||0}</div><div class="stat-label">${label}</div></div>`
+  ).join('');
+
+  document.getElementById('dash-agents').innerHTML = S.agents.slice(0,6).map(a =>
+    `<div class="panel-row" onclick="app.showAgent('${a.id}')"><span class="pr-name">${esc(a.name)}</span><span class="pr-desc">${esc(a.description)}</span></div>`
+  ).join('');
+
+  document.getElementById('dash-skills').innerHTML = S.skills.slice(0,6).map(s =>
+    `<div class="panel-row" onclick="app.showSkill('${s.id}')"><span class="pr-name">${esc(s.name||s.id)}</span><span class="pr-desc">${esc(s.description)}</span></div>`
+  ).join('');
+}
+
+/* ─── Render: Cards ─── */
+function renderAgents() {
+  const items = filterSearch(
+    S.agentFilter==='all' ? S.agents : S.agents.filter(a=>a.model===S.agentFilter),
+    S.q, ['name','description']
+  );
+  const models = [...new Set(S.agents.map(a=>a.model))];
+  document.getElementById('agents-filters').innerHTML =
+    ['all',...models].map(m=>
+      `<div class="chip ${S.agentFilter===m?'active':''}" onclick="app.setAgentFilter('${m}')">${m==='all'?'All':m}</div>`
+    ).join('');
+  const grid = document.getElementById('agents-grid');
+  if (!items.length) { grid.innerHTML=`<div class="empty"><div class="emoji">⬡</div><p>No agents match.</p></div>`; return; }
+  grid.innerHTML = items.map(a => {
+    const tools = (a.tools||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+    const more  = (a.tools||[]).length>3 ? `<span class="tag">+${a.tools.length-3}</span>` : '';
+    return `<div class="card" onclick="app.showAgent('${a.id}')">
+      <div class="card-hd"><div class="card-icon ci-agent">⬡</div><div><div class="card-name">${esc(a.name)}</div><div class="card-sub">${modelTag(a.model)}</div></div></div>
+      <div class="card-desc">${esc(a.description)}</div>
+      <div class="card-tags">${tools}${more}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderSkills() {
+  const items = filterSearch(
+    S.skillFilter==='all' ? S.skills : S.skills.filter(s=>s.category===S.skillFilter),
+    S.q, ['id','name','description']
+  );
+  const cats = [...new Set(S.skills.map(s=>s.category))].sort();
+  document.getElementById('skills-filters').innerHTML =
+    ['all',...cats].map(c=>
+      `<div class="chip ${S.skillFilter===c?'active':''}" onclick="app.setSkillFilter('${c}')">${c==='all'?'All':c}</div>`
+    ).join('');
+  const grid = document.getElementById('skills-grid');
+  if (!items.length) { grid.innerHTML=`<div class="empty"><div class="emoji">◈</div><p>No skills match.</p></div>`; return; }
+  grid.innerHTML = items.map(s =>
+    `<div class="card" onclick="app.showSkill('${s.id}')">
+      <div class="card-hd"><div class="card-icon ci-skill">◈</div><div><div class="card-name">${esc(s.name||s.id)}</div><div class="card-sub"><span class="tag">${esc(s.category)}</span></div></div></div>
+      <div class="card-desc">${esc(s.description||s.preview)}</div>
+    </div>`
+  ).join('');
+}
+
+function renderCommands() {
+  const items = filterSearch(S.commands, S.q, ['id','name','description']);
+  const grid = document.getElementById('commands-grid');
+  if (!items.length) { grid.innerHTML=`<div class="empty"><div class="emoji">⌘</div><p>No commands match.</p></div>`; return; }
+  grid.innerHTML = items.map(c =>
+    `<div class="card" onclick="app.showCmd('${c.id}')">
+      <div class="card-hd"><div class="card-icon ci-cmd">⌘</div><div><div class="card-name" style="font-family:var(--mono)">${esc(c.name)}</div></div></div>
+      <div class="card-desc">${esc(c.description)}</div>
+    </div>`
+  ).join('');
+}
+
+/* ─── Render: Optimization Report ─── */
+function renderReport(r) {
+  const m = r.metrics;
+  const perfColor = m.perfScore>=80?'var(--green)':m.perfScore>=60?'var(--yellow)':'var(--red)';
+  const circ = 2*Math.PI*30; // r=30
+  const filled = circ * (1 - m.perfScore/100);
+
+  // Score ring
+  const scoreBlock = `
+    <div class="score-banner">
+      <div class="score-ring">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle class="track" cx="40" cy="40" r="30"/>
+          <circle class="fill" cx="40" cy="40" r="30"
+            stroke="${perfColor}"
+            stroke-dasharray="${circ}"
+            stroke-dashoffset="${filled}"/>
+        </svg>
+        <div class="score-label">
+          <span class="score-num" style="color:${perfColor}">${m.perfScore}</span>
+          <span class="score-unit">/100</span>
+        </div>
+      </div>
+      <div class="score-info">
+        <div class="score-title">Optimization Score</div>
+        <div class="score-sub">
+          Agent <strong>${esc(r.agentName)}</strong> — ${esc(r.domains.join(', '))} ${esc(r.tasks.join(', '))} specialist.<br>
+          ${r.optimizations.length} optimizations applied across model selection, prompt engineering, and tool minimization.
+        </div>
+        <div class="score-chips">
+          <span class="score-chip sc-green">↓${m.costReduction}% cost</span>
+          <span class="score-chip sc-blue">↓${m.tokenReduction}% tokens</span>
+          <span class="score-chip sc-purple">↓${m.toolReduction}% tool surface</span>
+          <span class="score-chip sc-yellow">Save $${m.monthlySavings}/10k runs</span>
+        </div>
+      </div>
+    </div>`;
+
+  // Metric cards
+  const metricCards = `
+    <div class="metric-row">
+      <div class="metric-card">
+        <div class="metric-label">Cost / 1k Runs</div>
+        <div class="metric-val m-green">${fmtCost(m.after.costPer1k)}</div>
+        <div class="metric-sub">was ${fmtCost(m.before.costPer1k)}</div>
+        <span class="metric-delta delta-green">↓${m.costReduction}% reduction</span>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Input Tokens</div>
+        <div class="metric-val m-blue">${m.after.tokens.toLocaleString()}</div>
+        <div class="metric-sub">was ${m.before.tokens.toLocaleString()}</div>
+        <span class="metric-delta delta-green">↓${m.tokenReduction}% reduction</span>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Tool Surface</div>
+        <div class="metric-val m-purple">${m.after.tools}/${m.before.tools}</div>
+        <div class="metric-sub">tools selected / available</div>
+        <span class="metric-delta delta-green">↓${m.toolReduction}% attack surface</span>
+      </div>
+    </div>`;
+
+  // Before / After compare table
+  const compareRows = [
+    ['Model',        m.before.modelLabel,    m.after.modelLabel],
+    ['Input tokens', m.before.tokens.toLocaleString()+'  tok', m.after.tokens.toLocaleString()+' tok'],
+    ['Tools',        m.before.tools+' tools (all)', m.after.tools+' tools (minimal)'],
+    ['Cost / 1k',    fmtCost(m.before.costPer1k), fmtCost(m.after.costPer1k)],
+    ['Prompt style', m.before.promptType,    m.after.promptType],
+  ].map(([dim,bef,aft]) =>
+    `<div class="compare-row">
+      <div class="compare-dim">${esc(dim)}</div>
+      <div class="compare-before">${esc(bef)}</div>
+      <div class="compare-after">${esc(aft)}</div>
+    </div>`
+  ).join('');
+
+  const compareTable = `
+    <div class="compare-table">
+      <div class="compare-hd"><span>Dimension</span><span>Before (baseline)</span><span>After (optimized)</span></div>
+      ${compareRows}
+    </div>`;
+
+  // Optimizations accordion
+  const optItems = r.optimizations.map((o, i) => `
+    <div class="opt-item" id="oi-${i}">
+      <div class="opt-item-hd" onclick="app.toggleOpt(${i})">
+        <span class="opt-item-icon">${o.icon}</span>
+        <span class="opt-item-cat">${esc(o.category)}</span>
+        <span class="opt-item-impact">${esc(o.impact)}</span>
+        <span class="opt-item-arrow">▶</span>
+      </div>
+      <div class="opt-item-body">
+        <div class="opt-before-after">
+          <div class="oba-box">
+            <div class="oba-label before">Before</div>
+            <div class="oba-text">${esc(o.before)}</div>
+          </div>
+          <div class="oba-box">
+            <div class="oba-label after">After</div>
+            <div class="oba-text">${esc(o.after)}</div>
+          </div>
+        </div>
+        <div class="opt-reason">${esc(o.reason)}</div>
+      </div>
+    </div>`).join('');
+
+  // Generated agent file
+  const filename = `agents/${esc(r.agentId)}.md`;
+  const agentOutput = `
+    <div class="agent-output">
+      <div class="agent-output-hd">
+        <h3>Generated Agent Definition</h3>
+      </div>
+      <div class="agent-code">
+        <div class="agent-code-bar">
+          <span class="agent-code-filename">${filename}</span>
+          <button class="copy-btn" id="copy-agent-btn" onclick="copyText(${JSON.stringify(r.agentFile)}, this)">Copy file</button>
+        </div>
+        <pre>${highlightMd(r.agentFile)}</pre>
+      </div>
+    </div>`;
+
+  // Install banner
+  const installBanner = `
+    <div class="install-banner">
+      <div class="install-cmd"><code>${esc(r.recommendations.installCmd)}</code></div>
+      <div class="install-actions">
+        <button class="btn btn-ghost btn-sm" onclick="copyText('${esc(r.recommendations.installCmd)}', this)">Copy install cmd</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyText(${JSON.stringify(r.agentFile)}, this)">Copy agent file</button>
+      </div>
+    </div>`;
+
+  // AgentDoctor recommendations
+  const recAgents = r.recommendations.agents.map(a =>
+    `<div class="rec-card">
+      <span class="rec-score">↑${a.score}</span>
+      <div class="rec-body">
+        <div class="rec-name">⬡ ${esc(a.name)} ${modelTag(a.model)}</div>
+        <div class="rec-desc">${esc(a.description)}</div>
+      </div>
+    </div>`).join('');
+
+  const recSkills = r.recommendations.skills.map(s =>
+    `<div class="rec-card">
+      <span class="rec-score">↑${s.score}</span>
+      <div class="rec-body">
+        <div class="rec-name">◈ ${esc(s.name||s.id)} <span class="tag" style="font-size:10px">${esc(s.category)}</span></div>
+        <div class="rec-desc">${esc(s.description)}</div>
+      </div>
+    </div>`).join('');
+
+  const recCmds = r.recommendations.commands.map(c =>
+    `<div class="rec-card">
+      <span class="rec-score">↑${c.score}</span>
+      <div class="rec-body">
+        <div class="rec-name" style="font-family:var(--mono)">⌘ ${esc(c.name)}</div>
+        <div class="rec-desc">${esc(c.description)}</div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="report">
+      ${scoreBlock}
+      ${metricCards}
+      <div class="section-heading" style="margin-bottom:10px">Performance vs Baseline</div>
+      ${compareTable}
+      <div class="section-heading" style="margin-bottom:10px">Optimizations Applied (${r.optimizations.length})</div>
+      <div class="opt-list">${optItems}</div>
+      ${agentOutput}
+      <div class="section-heading" style="margin-bottom:10px">Recommended AgentDoctor Components</div>
+      ${installBanner}
+      ${recAgents ? `<div class="rec-section"><h3>⬡ Agents to Add <span class="count">${r.recommendations.agents.length}</span></h3><div class="rec-cards">${recAgents}</div></div>` : ''}
+      ${recSkills ? `<div class="rec-section"><h3>◈ Skills to Activate <span class="count">${r.recommendations.skills.length}</span></h3><div class="rec-cards">${recSkills}</div></div>` : ''}
+      ${recCmds   ? `<div class="rec-section"><h3>⌘ Commands to Use <span class="count">${r.recommendations.commands.length}</span></h3><div class="rec-cards">${recCmds}</div></div>` : ''}
+    </div>`;
+}
+
+/* ─── App ─── */
+const app = {
+  goto(view) {
+    S.view = view; S.q = '';
+    document.getElementById('search-input').value = '';
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item[data-view]').forEach(el => el.classList.remove('active'));
+    document.getElementById(`view-${view}`).classList.add('active');
+    document.querySelector(`[data-view="${view}"]`).classList.add('active');
+    const titles = { dashboard:'Dashboard', optimizer:'Optimizer', agents:'Agents', skills:'Skills', commands:'Commands' };
+    document.getElementById('page-title').textContent = titles[view]||view;
+    const searchViews = ['agents','skills','commands'];
+    document.getElementById('search-box').style.display = searchViews.includes(view) ? 'flex' : 'none';
+    if (view==='dashboard') renderDashboard();
+    if (view==='agents')    renderAgents();
+    if (view==='skills')    renderSkills();
+    if (view==='commands')  renderCommands();
+  },
+
+  setAgentFilter(v) { S.agentFilter=v; renderAgents(); },
+  setSkillFilter(v) { S.skillFilter=v; renderSkills(); },
+
+  async showAgent(id) {
+    const a = await api.get(`/api/agents/${id}`);
+    document.getElementById('drawer-title').textContent = a.name;
+    document.getElementById('drawer-meta').innerHTML  = `${modelTag(a.model)} &nbsp; agent`;
+    const tools = (a.tools||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join(' ');
+    document.getElementById('drawer-body').innerHTML = `
+      <div class="drawer-sec"><div class="drawer-sec-label">Description</div><div class="drawer-text">${esc(a.description)}</div></div>
+      ${tools ? `<div class="drawer-sec"><div class="drawer-sec-label">Tools</div><div>${tools}</div></div>` : ''}
+      <div class="drawer-sec"><div class="drawer-sec-label">System Prompt Preview</div><div class="drawer-code">${esc((a.fullContent||a.preview||'').slice(0,500))}${(a.fullContent||'').length>500?'\n…':''}</div></div>`;
+    document.getElementById('drawer-ft').innerHTML =
+      `<button class="btn btn-primary btn-sm" onclick="copyText('agents/${esc(id)}.md', this)">⎘ Copy path</button>
+       <button class="btn btn-ghost btn-sm" onclick="copyText(${JSON.stringify('---\nname: '+a.name+'\nmodel: '+a.model+'\n---')}, this)">Copy frontmatter</button>`;
+    this._openDrawer();
+  },
+
+  showSkill(id) {
+    const s = S.skills.find(x=>x.id===id); if (!s) return;
+    document.getElementById('drawer-title').textContent = s.name||s.id;
+    document.getElementById('drawer-meta').innerHTML  = `<span class="tag">${esc(s.category)}</span> &nbsp; skill`;
+    document.getElementById('drawer-body').innerHTML = `
+      <div class="drawer-sec"><div class="drawer-sec-label">Description</div><div class="drawer-text">${esc(s.description||s.preview)}</div></div>
+      <div class="drawer-sec"><div class="drawer-sec-label">Activate</div><div class="drawer-code">skills/${esc(id)}/SKILL.md</div></div>`;
+    document.getElementById('drawer-ft').innerHTML =
+      `<button class="btn btn-primary btn-sm" onclick="copyText('skills/${esc(id)}/SKILL.md', this)">⎘ Copy path</button>`;
+    this._openDrawer();
+  },
+
+  showCmd(id) {
+    const c = S.commands.find(x=>x.id===id); if (!c) return;
+    document.getElementById('drawer-title').textContent = c.name;
+    document.getElementById('drawer-meta').textContent = 'slash command';
+    document.getElementById('drawer-body').innerHTML = `
+      <div class="drawer-sec"><div class="drawer-sec-label">Description</div><div class="drawer-text">${esc(c.description)}</div></div>
+      <div class="drawer-sec"><div class="drawer-sec-label">Usage</div><div class="drawer-code">${esc(c.name)}</div></div>`;
+    document.getElementById('drawer-ft').innerHTML =
+      `<button class="btn btn-primary btn-sm" onclick="copyText('${esc(c.name)}', this)">⎘ Copy command</button>`;
+    this._openDrawer();
+  },
+
+  _openDrawer() { document.getElementById('drawer-overlay').classList.add('open'); },
+  closeDrawer(e) {
+    if (e && e.target !== document.getElementById('drawer-overlay')) return;
+    document.getElementById('drawer-overlay').classList.remove('open');
+  },
+
+  async runOptimizer() {
+    const desc = document.getElementById('opt-input').value.trim();
+    if (desc.length < 10) { alert('Please describe your agent in a bit more detail.'); return; }
+    const btn = document.getElementById('opt-btn');
+    btn.innerHTML = '<div class="spinner"></div> Analyzing…';
+    btn.disabled = true;
+    document.getElementById('opt-results').innerHTML = '';
+    try {
+      const r = await api.post('/api/optimize', { description: desc });
+      document.getElementById('opt-results').innerHTML = renderReport(r);
+    } catch (err) {
+      document.getElementById('opt-results').innerHTML =
+        `<div style="color:var(--red);padding:12px;font-size:13px">Error: ${esc(err.message)}</div>`;
+    } finally {
+      btn.innerHTML = '✦ Optimize Agent';
+      btn.disabled = false;
+    }
+  },
+
+  clearOptimizer() {
+    document.getElementById('opt-input').value = '';
+    document.getElementById('opt-results').innerHTML = '';
+  },
+
+  toggleOpt(i) {
+    const el = document.getElementById(`oi-${i}`);
+    el.classList.toggle('open');
+  },
+};
+
+/* ─── Search ─── */
+document.getElementById('search-input').addEventListener('input', e => {
+  S.q = e.target.value;
+  if (S.view==='agents')   renderAgents();
+  if (S.view==='skills')   renderSkills();
+  if (S.view==='commands') renderCommands();
+});
+
+/* ─── Nav ─── */
+document.querySelectorAll('.nav-item[data-view]').forEach(el =>
+  el.addEventListener('click', () => app.goto(el.dataset.view))
+);
+
+/* ─── Keyboard ─── */
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') app.closeDrawer(null);
+  if ((e.metaKey||e.ctrlKey) && e.key==='k') {
+    e.preventDefault();
+    const si = document.getElementById('search-input');
+    if (si.offsetParent) si.focus();
+  }
+});
+
+/* ─── Boot ─── */
+(async () => {
+  try {
+    const [stats, agents, skills, commands] = await Promise.all([
+      api.get('/api/stats'),
+      api.get('/api/agents'),
+      api.get('/api/skills'),
+      api.get('/api/commands'),
+    ]);
+    Object.assign(S, { stats, agents, skills, commands });
+    document.getElementById('nb-agents').textContent   = agents.length;
+    document.getElementById('nb-skills').textContent   = skills.length;
+    document.getElementById('nb-commands').textContent = commands.length;
+    document.getElementById('ver').textContent         = `v${stats.version}`;
+    document.getElementById('opt-hint').textContent    =
+      `Generates optimized agent definition + cost & performance analysis`;
+    renderDashboard();
+  } catch (err) {
+    document.getElementById('stat-grid').innerHTML =
+      `<div style="color:var(--red);font-size:13px;padding:20px">Failed to connect: ${esc(err.message)}</div>`;
+  }
+})();
+</script>
+</body>
+</html>

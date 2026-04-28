@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(head:*)",
+      "Bash(curl:*)",
+      "mcp__playwright__browser_navigate",
+      "Bash(lsof:*)",
+      "Bash(ls:*)",
+      "Bash(git init:*)",
+      "Bash(git fetch:*)",
+      "Bash(ssh:*)",
+      "Bash(mkdir:*)",
+      "Bash(gh auth:*)",
+      "Bash(which git:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "github",
+    "context7",
+    "exa",
+    "memory",
+    "playwright",
+    "sequential-thinking"
+  ]
+}
